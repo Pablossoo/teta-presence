@@ -258,14 +258,19 @@ function updateIcon(status) {
   
   if (status === 'success' || status === 'already_done') {
     // Green checkmark
-    const imageData = generateIcon('#28a745', true);
+    const imageData = generateIcon('#28a745', 'check');
     chrome.action.setIcon({ imageData: { "48": imageData, "128": imageData } });
     
   } else if (status === 'not_logged_in' || status === 'error') {
-    // Red icon (e.g., a cross or just a red dot)
-    const imageData = generateIcon('#dc3545', false);
+    // Red cross
+    const imageData = generateIcon('#dc3545', 'cross');
     chrome.action.setIcon({ imageData: { "48": imageData, "128": imageData } });
     
+  } else if (status === 'running' || status === 'idle') {
+    // Neutral waiting icon (e.g., orange circle with a clock)
+    const imageData = generateIcon('#fd7e14', 'clock');
+    chrome.action.setIcon({ imageData: { "48": imageData, "128": imageData } });
+
   } else {
     // Reset to default
     chrome.action.setIcon({
@@ -274,7 +279,7 @@ function updateIcon(status) {
   }
 }
 
-function generateIcon(color, isCheckmark) {
+function generateIcon(color, type) {
   const canvas = new OffscreenCanvas(48, 48);
   const ctx = canvas.getContext('2d');
   
@@ -284,12 +289,12 @@ function generateIcon(color, isCheckmark) {
   ctx.arc(24, 24, 22, 0, 2 * Math.PI);
   ctx.fill();
   
-  // Large "T" - making it more prominent
+  // Large "T"
   ctx.fillStyle = 'white';
   ctx.font = 'bold 42px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('T', 24, 25); // Slightly adjusted vertical alignment
+  ctx.fillText('T', 24, 25);
   
   // Larger badge indicator on the bottom right
   ctx.fillStyle = 'white';
@@ -304,17 +309,23 @@ function generateIcon(color, isCheckmark) {
   ctx.lineJoin = 'round';
   ctx.beginPath();
   
-  if (isCheckmark) {
-    // Checkmark inside the small badge
+  if (type === 'check') {
     ctx.moveTo(34, 38);
     ctx.lineTo(36, 40);
     ctx.lineTo(42, 34);
-  } else {
-    // Cross inside the small badge
+  } else if (type === 'cross') {
     ctx.moveTo(35, 35);
     ctx.lineTo(41, 41);
     ctx.moveTo(41, 35);
     ctx.lineTo(35, 41);
+  } else if (type === 'clock') {
+    // Clock symbol
+    ctx.arc(38, 38, 5, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.moveTo(38, 38);
+    ctx.lineTo(38, 35);
+    ctx.moveTo(38, 38);
+    ctx.lineTo(40, 38);
   }
   ctx.stroke();
   

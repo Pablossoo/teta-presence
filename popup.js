@@ -73,7 +73,9 @@ document.getElementById('runNowBtn').addEventListener('click', () => {
 
 // "Reset" button — clears successDate and status so the next run treats today as fresh
 document.getElementById('resetBtn').addEventListener('click', () => {
-  chrome.storage.local.remove(['successDate', 'status', 'statusDetail', 'statusTime', 'logs'], () => {
-    loadAndRender();
+  chrome.storage.local.remove(['successDate', 'statusDetail', 'statusTime', 'logs'], () => {
+    chrome.storage.local.set({ status: 'idle' }, () => {
+      loadAndRender();
+    });
   });
 });

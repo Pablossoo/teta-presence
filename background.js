@@ -255,45 +255,70 @@ function sleep(ms) {
 // ---------------------------------------------------------------------------
 function updateIcon(status) {
   log('info', `Updating icon for status: ${status}`);
+  
   if (status === 'success' || status === 'already_done') {
-    // Generate a green checkmark icon using OffscreenCanvas
-    const canvas = new OffscreenCanvas(48, 48);
-    const ctx = canvas.getContext('2d');
+    // Green checkmark
+    const imageData = generateIcon('#28a745', true);
+    chrome.action.setIcon({ imageData: { "48": imageData, "128": imageData } });
     
-    // Green circle background
-    ctx.fillStyle = '#28a745';
-    ctx.beginPath();
-    ctx.arc(24, 24, 22, 0, 2 * Math.PI);
-    ctx.fill();
+  } else if (status === 'not_logged_in' || status === 'error') {
+    // Red icon (e.g., a cross or just a red dot)
+    const imageData = generateIcon('#dc3545', false);
+    chrome.action.setIcon({ imageData: { "48": imageData, "128": imageData } });
     
-    // White checkmark
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(12, 24);
-    ctx.lineTo(22, 34);
-    ctx.lineTo(36, 14);
-    ctx.stroke();
-    
-    const imageData = ctx.getImageData(0, 0, 48, 48);
-    
-    chrome.action.setIcon({
-      imageData: { 
-        "48": imageData,
-        "128": imageData // Using the same image for 128 for simplicity
-      }
-    });
   } else {
-    // Reset to default icons from manifest
+    // Reset to default
     chrome.action.setIcon({
-      path: {
-        "48": "icons/icon48.png",
-        "128": "icons/icon128.png"
-      }
+      path: { "48": "icons/icon48.png", "128": "icons/icon128.png" }
     });
   }
+}
+
+function generateIcon(color, isCheckmark) {
+  const canvas = new OffscreenCanvas(48, 48);
+  const ctx = canvas.getContext('2d');
+  
+  // Background circle
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(24, 24, 22, 0, 2 * Math.PI);
+  ctx.fill();
+  
+  // Large "T" - making it more prominent
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 42px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('T', 24, 25); // Slightly adjusted vertical alignment
+  
+  // Larger badge indicator on the bottom right
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(38, 38, 8, 0, 2 * Math.PI);
+  ctx.fill();
+  
+  // Symbol inside the badge
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  
+  if (isCheckmark) {
+    // Checkmark inside the small badge
+    ctx.moveTo(34, 38);
+    ctx.lineTo(36, 40);
+    ctx.lineTo(42, 34);
+  } else {
+    // Cross inside the small badge
+    ctx.moveTo(35, 35);
+    ctx.lineTo(41, 41);
+    ctx.moveTo(41, 35);
+    ctx.lineTo(35, 41);
+  }
+  ctx.stroke();
+  
+  return ctx.getImageData(0, 0, 48, 48);
 }
 
 // Listen for status changes to update the icon

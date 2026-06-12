@@ -55,14 +55,20 @@ async function tryPresence(manualTrigger = false) {
   const hour  = now.getHours();
   const today = toDateKey(now);
 
+  // New day reset: if successDate is from a past day, reset status so the icon updates
+  const { successDate, status } = await storageGet(['successDate', 'status']);
+  if (successDate && successDate !== today && (status === 'success' || status === 'already_done')) {
+    await setStatus('idle');
+  }
+
   // Outside working hours — skip silently (unless manually triggered)
   if (!manualTrigger && (hour < START_HOUR || hour >= END_HOUR)) {
     return;
   }
 
   // Already succeeded today
-  const { successDate } = await storageGet(['successDate']);
-  if (successDate === today) {
+  const { successDate: savedSuccessDate } = await storageGet(['successDate']);
+  if (savedSuccessDate === today) {
     log('info', 'Obecność już została potwierdzona dzisiaj.');
     await setStatus('already_done');
     return;
@@ -243,6 +249,64 @@ function toDateKey(date) {
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// ---------------------------------------------------------------------------
+// Icon management
+// ---------------------------------------------------------------------------
+function updateIcon(status) {
+  log('info', `Updating icon for status: ${status}`);
+  if (status === 'success' || status === 'already_done') {
+    // Generate a green checkmark icon using OffscreenCanvas
+    const canvas = new OffscreenCanvas(48, 48);
+    const ctx = canvas.getContext('2d');
+    
+    // Green circle background
+    ctx.fillStyle = '#28a745';
+    ctx.beginPath();
+    ctx.arc(24, 24, 22, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // White checkmark
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(12, 24);
+    ctx.lineTo(22, 34);
+    ctx.lineTo(36, 14);
+    ctx.stroke();
+    
+    const imageData = ctx.getImageData(0, 0, 48, 48);
+    
+    chrome.action.setIcon({
+      imageData: { 
+        "48": imageData,
+        "128": imageData // Using the same image for 128 for simplicity
+      }
+    });
+  } else {
+    // Reset to default icons from manifest
+    chrome.action.setIcon({
+      path: {
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+      }
+    });
+  }
+}
+
+// Listen for status changes to update the icon
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.status) {
+    updateIcon(changes.status.newValue);
+  }
+});
+
+// Set initial icon on startup
+chrome.storage.local.get(['status'], data => {
+  updateIcon(data.status);
+});
 
 // ---------------------------------------------------------------------------
 // Handle manual "Run Now" trigger from popup
